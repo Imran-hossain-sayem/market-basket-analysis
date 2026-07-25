@@ -36,11 +36,16 @@ def load_and_preprocess_data():
     import os
 
 # NEW FIXED PATH RESOLUTION
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(current_dir, 'groceries - groceries.csv')
+        current_dir = os.path.dirname(os.path.abspath(__file__))
     
+    # Check for the underscore version first, fallback to the hyphen version if missing
+        if os.path.exists(os.path.join(current_dir, 'groceries_groceries.csv')):
+            csv_path = os.path.join(current_dir, 'groceries_groceries.csv')
+        else:
+            csv_path = os.path.join(current_dir, 'groceries - groceries.csv')
+        
     raw_df = pd.read_csv(csv_path)
-    transactions = []
+
     for index, row in raw_df.iterrows():
         num_items = int(row['Item(s)'])
         items_in_row = []
