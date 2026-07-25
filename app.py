@@ -33,7 +33,14 @@ min_confidence_input = st.sidebar.slider("Minimum Confidence", min_value=0.1, ma
 # --- Data Loading and Preprocessing ---
 @st.cache_data
 def load_and_preprocess_data():
-    raw_df = pd.read_csv('groceries - groceries.csv')
+    import os
+
+# NEW FIXED PATH RESOLUTION
+current_dir = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(current_dir, 'groceries - groceries.csv')
+
+raw_df = pd.read_csv(csv_path)
+
 
     transactions = []
     for index, row in raw_df.iterrows():
