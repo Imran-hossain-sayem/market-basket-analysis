@@ -57,13 +57,21 @@ def load_and_preprocess_data():
                                              )
                                          ))
     final_baskets = cleaned_baskets.filter(F.size("items") > 1)
-    return final_baskets
+    
+    # Convert Spark DataFrame to Pandas before returning (required for caching)
+    return final_baskets.toPandas()
 
-final_baskets_df = load_and_preprocess_data()
+final_baskets_df_pd = load_and_preprocess_data()
+
+# Convert back to Spark DataFrame for processing
+final_baskets_df = spark.createDataFrame(final_baskets_df_pd)
 
 # --- FPGrowth Model ---
 @st.cache_data(show_spinner="Generating Frequent Itemsets and Rules...")
-def run_fpgrowth(data, support, confidence):
+def run_fpgrowth(data_pd, support, confidence):
+    # Convert Pandas back to Spark for FPGrowth
+    data = spark.createDataFrame(data_pd)
+    
     fpGrowth = FPGrowth(itemsCol="items", minSupport=support, minConfidence=confidence)
     model = fpGrowth.fit(data)
     
@@ -71,9 +79,9 @@ def run_fpgrowth(data, support, confidence):
     frequent_itemsets_pd = model.freqItemsets.toPandas()
     association_rules_pd = model.associationRules.toPandas()
     
-    return frequent_itemsets_pd, association_rules_pd, model
+    return frequent_itemsets_pd, association_rules_pd
 
-frequent_itemsets_pd, association_rules_pd, fp_model = run_fpgrowth(final_baskets_df, min_support_input, min_confidence_input)
+frequent_itemsets_pd, association_rules_pd = run_fpgrowth(final_baskets_df_pd, min_support_input, min_confidence_input)
 
 st.subheader(f"Frequent Itemsets (Min Support: {min_support_input})")
 st.write(f"Found {len(frequent_itemsets_pd)} frequent itemsets.")
@@ -103,7 +111,7 @@ st.pyplot(fig_top_items)
 # 2. Top Association Rules by Lift
 st.subheader("Top Association Rules by Lift")
 if not association_rules_pd.empty:
-    top_rules_by_lift_pd = association_rules_pd.orderBy('lift', ascending=False).head(10)
+    top_rules_by_lift_pd = association_rules_pd.nlargest(10, 'lift')
     top_rules_by_lift_pd['rule_str'] = top_rules_by_lift_pd.apply(lambda row: f"{', '.join(row['antecedent'])} => {', '.join(row['consequent'])}", axis=1)
 
     fig_lift, ax_lift = plt.subplots(figsize=(12, 8))
