@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from pyspark.sql import SparkSession
@@ -33,19 +32,9 @@ min_confidence_input = st.sidebar.slider("Minimum Confidence", min_value=0.1, ma
 # --- Data Loading and Preprocessing ---
 @st.cache_data
 def load_and_preprocess_data():
-    import os
-    
-    # NEW FIXED PATH RESOLUTION
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Check for the underscore version first, fallback to the hyphen version if missing
-    if os.path.exists(os.path.join(current_dir, 'groceries_groceries.csv')):
-        csv_path = os.path.join(current_dir, 'groceries_groceries.csv')
-    else:
-        csv_path = os.path.join(current_dir, 'groceries - groceries.csv')
-        
-    raw_df = pd.read_csv(csv_path)
+    raw_df = pd.read_csv('groceries - groceries (1).csv')
 
+    transactions = []
     for index, row in raw_df.iterrows():
         num_items = int(row['Item(s)'])
         items_in_row = []
@@ -269,5 +258,3 @@ if not association_rules_pd.empty:
     st.plotly_chart(plotly_fig, use_container_width=True)
 else:
     st.write("No association rules found to generate network graph.")
-
-
