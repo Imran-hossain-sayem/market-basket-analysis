@@ -1,0 +1,7 @@
+streamlit
+pandas
+pyspark
+matplotlib
+seaborn
+networkx
+plotly
