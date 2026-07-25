@@ -34,15 +34,15 @@ min_confidence_input = st.sidebar.slider("Minimum Confidence", min_value=0.1, ma
 @st.cache_data
 def load_and_preprocess_data():
     import os
-
-# NEW FIXED PATH RESOLUTION
-        current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # NEW FIXED PATH RESOLUTION
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     
     # Check for the underscore version first, fallback to the hyphen version if missing
-        if os.path.exists(os.path.join(current_dir, 'groceries_groceries.csv')):
-            csv_path = os.path.join(current_dir, 'groceries_groceries.csv')
-        else:
-            csv_path = os.path.join(current_dir, 'groceries - groceries.csv')
+    if os.path.exists(os.path.join(current_dir, 'groceries_groceries.csv')):
+        csv_path = os.path.join(current_dir, 'groceries_groceries.csv')
+    else:
+        csv_path = os.path.join(current_dir, 'groceries - groceries.csv')
         
     raw_df = pd.read_csv(csv_path)
 
