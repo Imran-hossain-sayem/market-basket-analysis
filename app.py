@@ -5,7 +5,8 @@ from pyspark.sql import functions as F
 from pyspark.ml.fpm import FPGrowth
 import matplotlib.pyplot as plt
 import seaborn as sns
-import networkx as nximport streamlit as st
+import networkx as nx
+import streamlit as st
 import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
