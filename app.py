@@ -212,42 +212,9 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Parameter Optimization
-    st.markdown("### 🎯 Optimization")
-    if st.button("🔍 Suggest Optimal Parameters", use_container_width=True):
-        with st.spinner("Finding optimal parameters..."):
-            support_options = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03]
-            conf_options = [0.2, 0.25, 0.3, 0.35, 0.4]
-            
-            best_params = None
-            best_score = 0
-            
-            progress_bar = st.progress(0)
-            total_combos = len(support_options) * len(conf_options)
-            combo_count = 0
-            
-            for sup in support_options:
-                for conf in conf_options:
-                    try:
-                        _, rules = run_fpgrowth(final_baskets_df_pd, sup, conf)
-                        if len(rules) > 0 and len(rules) < 1000:
-                            # Score based on number of rules and average lift
-                            score = len(rules) * rules['lift'].mean() * rules['confidence'].mean()
-                            if score > best_score:
-                                best_score = score
-                                best_params = (sup, conf)
-                    except:
-                        pass
-                    combo_count += 1
-                    progress_bar.progress(combo_count / total_combos)
-            
-            progress_bar.empty()
-            
-            if best_params:
-                st.success(f"✨ Suggested: Support={best_params[0]:.3f}, Confidence={best_params[1]:.2f}")
-                st.info("Try these values for better results!")
-            else:
-                st.warning("Could not find optimal parameters. Try different ranges.")
+    # Parameter Optimization - Removed button, just showing message
+    st.markdown("### 📊 Parameter Tips")
+    st.info("💡 Try different support and confidence ranges to discover more or fewer rules. Lower support finds more itemsets, higher confidence gives more reliable rules.")
     
     st.markdown("---")
     
@@ -275,7 +242,7 @@ with st.sidebar:
         )
     
     st.markdown("---")
-    st.caption("Built with ❤️ using PySpark & Streamlit")
+    st.caption("Built with PySpark & Streamlit")
 
 # ============================================================================
 # DATA LOADING AND PREPROCESSING
@@ -318,7 +285,7 @@ final_baskets_df = spark.createDataFrame(final_baskets_df_pd)
 # FPGROWTH MODEL
 # ============================================================================
 
-@st.cache_data(show_spinner="🔍 Mining frequent itemsets and generating rules...")
+@st.cache_data(show_spinner="Mining frequent itemsets and generating rules...")
 def run_fpgrowth(data_pd, support, confidence):
     data = spark.createDataFrame(data_pd)
     fpGrowth = FPGrowth(itemsCol="items", minSupport=support, minConfidence=confidence)
@@ -498,6 +465,32 @@ with tab2:
         st.metric("Avg Occurrences per Item", f"{avg_occurrence:.1f}")
         st.metric("Most Frequent Item", f"{top_items_pd.iloc[0]['item']} ({top_items_pd.iloc[0]['count']}x)")
         st.metric("Least Frequent (Top 20)", f"{top_items_pd.iloc[-1]['item']} ({top_items_pd.iloc[-1]['count']}x)")
+    
+    # Top 10 Item Share - Pie Chart
+    st.markdown("### 📊 Top 10 Item Share")
+    
+    top_10_items = top_items_pd.head(10).copy()
+    other_count = top_items_pd['count'].iloc[10:].sum() if len(top_items_pd) > 10 else 0
+    
+    if other_count > 0:
+        top_10_items = pd.concat([
+            top_10_items,
+            pd.DataFrame({'item': ['Others'], 'count': [other_count]})
+        ], ignore_index=True)
+    
+    fig_pie, ax_pie = plt.subplots(figsize=(10, 8))
+    colors_pie = sns.color_palette("viridis", n_colors=len(top_10_items))
+    wedges, texts, autotexts = ax_pie.pie(
+        top_10_items['count'],
+        labels=top_10_items['item'],
+        autopct='%1.1f%%',
+        colors=colors_pie,
+        startangle=90,
+        textprops={'fontsize': 10}
+    )
+    ax_pie.set_title('Top 10 Items Share Distribution', fontsize=16, fontweight='bold')
+    st.pyplot(fig_pie)
+    plt.close()
     
     # Basket Size Distribution
     st.markdown("### 📦 Basket Size Distribution")
@@ -723,7 +716,7 @@ with tab4:
         with col2:
             layout_option = st.selectbox(
                 "Network Layout",
-                ["Spring", "Circular", "Kamada-Kawai", "Random"],
+                ["Spring", "Circular", "Random"],
                 help="Different layouts for visualizing the network"
             )
         
@@ -762,8 +755,6 @@ with tab4:
             pos = nx.spring_layout(G, k=0.5, iterations=100, scale=2, seed=42)
         elif layout_option == "Circular":
             pos = nx.circular_layout(G, scale=2)
-        elif layout_option == "Kamada-Kawai":
-            pos = nx.kamada_kawai_layout(G, scale=2)
         else:
             pos = nx.random_layout(G, seed=42)
         
@@ -876,6 +867,24 @@ with tab5:
     item_counts = exploded_items.groupBy("item").count().orderBy(F.desc("count"))
     top_items_pd = item_counts.limit(20).toPandas()
     
+    # Distribution of Lift Values
+    if not association_rules_pd.empty:
+        st.markdown("#### 📊 Distribution of Lift Values")
+        
+        fig_lift_dist, ax_lift_dist = plt.subplots(figsize=(10, 6))
+        ax_lift_dist.hist(association_rules_pd['lift'], bins=20, color='#6B73FF', edgecolor='white', alpha=0.7)
+        ax_lift_dist.axvline(association_rules_pd['lift'].mean(), color='red', linestyle='--', 
+                            label=f'Mean: {association_rules_pd["lift"].mean():.2f}')
+        ax_lift_dist.axvline(association_rules_pd['lift'].median(), color='green', linestyle='--', 
+                            label=f'Median: {association_rules_pd["lift"].median():.2f}')
+        ax_lift_dist.set_title('Distribution of Lift Values', fontsize=16, fontweight='bold')
+        ax_lift_dist.set_xlabel('Lift', fontsize=12)
+        ax_lift_dist.set_ylabel('Frequency', fontsize=12)
+        ax_lift_dist.legend()
+        ax_lift_dist.grid(axis='y', alpha=0.3)
+        st.pyplot(fig_lift_dist)
+        plt.close()
+    
     # 1. Co-occurrence Matrix
     st.markdown("#### 🔥 Top Items Co-occurrence Matrix")
     
@@ -966,20 +975,22 @@ with tab5:
         # Distribution plots
         fig_stats, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
         
-        # Lift distribution
-        ax1.hist(association_rules_pd['lift'], bins=20, color='#6B73FF', edgecolor='white', alpha=0.7)
-        ax1.axvline(association_rules_pd['lift'].mean(), color='red', linestyle='--', label=f'Mean: {association_rules_pd["lift"].mean():.2f}')
-        ax1.set_title('Distribution of Lift Values', fontsize=14, fontweight='bold')
-        ax1.set_xlabel('Lift', fontsize=12)
+        # Confidence distribution
+        ax1.hist(association_rules_pd['confidence'], bins=20, color='#00D2FF', edgecolor='white', alpha=0.7)
+        ax1.axvline(association_rules_pd['confidence'].mean(), color='red', linestyle='--', 
+                   label=f'Mean: {association_rules_pd["confidence"].mean():.2f}')
+        ax1.set_title('Distribution of Confidence Values', fontsize=14, fontweight='bold')
+        ax1.set_xlabel('Confidence', fontsize=12)
         ax1.set_ylabel('Frequency', fontsize=12)
         ax1.legend()
         ax1.grid(axis='y', alpha=0.3)
         
-        # Confidence distribution
-        ax2.hist(association_rules_pd['confidence'], bins=20, color='#00D2FF', edgecolor='white', alpha=0.7)
-        ax2.axvline(association_rules_pd['confidence'].mean(), color='red', linestyle='--', label=f'Mean: {association_rules_pd["confidence"].mean():.2f}')
-        ax2.set_title('Distribution of Confidence Values', fontsize=14, fontweight='bold')
-        ax2.set_xlabel('Confidence', fontsize=12)
+        # Support distribution
+        ax2.hist(association_rules_pd['support'], bins=20, color='#FF6B6B', edgecolor='white', alpha=0.7)
+        ax2.axvline(association_rules_pd['support'].mean(), color='red', linestyle='--', 
+                   label=f'Mean: {association_rules_pd["support"].mean():.3f}')
+        ax2.set_title('Distribution of Support Values', fontsize=14, fontweight='bold')
+        ax2.set_xlabel('Support', fontsize=12)
         ax2.set_ylabel('Frequency', fontsize=12)
         ax2.legend()
         ax2.grid(axis='y', alpha=0.3)
@@ -992,6 +1003,6 @@ with tab5:
     st.markdown("---")
     st.markdown("""
     <div class="footer">
-        <p>BasketSense v1.0 | Built with PySpark, Streamlit, and ❤️</p>
+        <p>BasketSense v1.0 | Built with PySpark & Streamlit</p>
     </div>
     """, unsafe_allow_html=True)
