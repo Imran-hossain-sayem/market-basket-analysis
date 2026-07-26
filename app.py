@@ -478,7 +478,7 @@ with tab2:
             pd.DataFrame({'item': ['Others'], 'count': [other_count]})
         ], ignore_index=True)
     
-    fig_pie, ax_pie = plt.subplots(figsize=(10, 8))
+    fig_pie, ax_pie = plt.subplots(figsize=(8, 8))
     colors_pie = sns.color_palette("viridis", n_colors=len(top_10_items))
     wedges, texts, autotexts = ax_pie.pie(
         top_10_items['count'],
